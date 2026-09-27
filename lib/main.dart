@@ -11,6 +11,7 @@ import 'bazar_game_catalog.dart';
 import 'bazar_game_models.dart';
 import 'bazar_game_screen.dart';
 import 'bazar_game_storage.dart';
+import 'commander_school.dart';
 import 'economy_engine.dart';
 import 'economy_models.dart';
 import 'finance_content.dart';
@@ -265,6 +266,11 @@ class _BaramotRootState extends State<BaramotRoot> {
           icon: Icons.build_rounded,
           label: 'Ремонт корабля',
           value: '$repairPaid / $repairTotal Дар',
+        ),
+        AdultProgressRow(
+          icon: Icons.school_rounded,
+          label: CommanderSchool.title,
+          value: CommanderSchool.rankFor(FinanceTaskProgress.completed(_game).length).title,
         ),
         AdultProgressRow(
           icon: Icons.pets_rounded,
@@ -1915,6 +1921,7 @@ class _BaramotRootState extends State<BaramotRoot> {
                           onBazar: _openBazar,
                           onTir: _openTir,
                           onInfo: () => showSpravochnayaDialog(context),
+                          onSchool: _openTasks,
                         ),
                         const SizedBox(height: 12),
                         _StatusCard(
@@ -1980,9 +1987,10 @@ class _BaramotRootState extends State<BaramotRoot> {
                               onTap: openTentForPhase,
                             ),
                             _QuickLinkCard(
-                              icon: Icons.task_alt_rounded,
-                              title: 'Задания',
-                              subtitle: 'пройдено ${FinanceTaskProgress.completed(_game).length} из ${FinanceContent.tasks.length}',
+                              icon: Icons.school_rounded,
+                              title: CommanderSchool.title,
+                              subtitle: '${CommanderSchool.rankFor(FinanceTaskProgress.completed(_game).length).title} · '
+                                  'пройдено ${FinanceTaskProgress.completed(_game).length} из ${FinanceContent.tasks.length}',
                               onTap: _openTasks,
                             ),
                             _QuickLinkCard(
@@ -2707,6 +2715,7 @@ class _BaseHubScene extends StatelessWidget {
   final VoidCallback onBazar;
   final VoidCallback onTir;
   final VoidCallback onInfo;
+  final VoidCallback onSchool;
 
   const _BaseHubScene({
     required this.backgroundAsset,
@@ -2720,6 +2729,7 @@ class _BaseHubScene extends StatelessWidget {
     required this.onBazar,
     required this.onTir,
     required this.onInfo,
+    required this.onSchool,
   });
 
   @override
@@ -2876,9 +2886,83 @@ class _BaseHubScene extends StatelessWidget {
                       ),
                     ),
                   ),
+                // Неоновая вывеска «Школа командиров» на краю стола — вход
+                // в финансовые задания, отдельно от сюжета в Палатке.
+                Positioned(
+                  left: constraints.maxWidth * 0.33,
+                  top: constraints.maxHeight * 0.71,
+                  width: constraints.maxWidth * 0.34,
+                  height: constraints.maxHeight * 0.22,
+                  child: _SchoolNeonSign(onTap: onSchool),
+                ),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Неоновая вывеска «Школа командиров» на сцене Базы.
+/// Кроме свечения у неё есть значок и подпись — цвет не единственный
+/// признак (ТЗ 3.6). Область нажатия шире и выше самой вывески, чтобы
+/// ребёнку было удобно попасть пальцем (ТЗ 3.6, рекомендация 48 dp).
+class _SchoolNeonSign extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _SchoolNeonSign({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const neon = Color(0xFF00E5FF);
+    const neonPink = Color(0xFFFF4FD8);
+    return Semantics(
+      button: true,
+      label: CommanderSchool.title,
+      child: GestureDetector(
+        key: const Key('base.school.hotspot'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Center(
+          child: FractionallySizedBox(
+            heightFactor: 0.6,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xCC0B1024),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: neonPink, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x99FF4FD8), blurRadius: 14, spreadRadius: 1),
+                  BoxShadow(color: Color(0x6600E5FF), blurRadius: 24),
+                ],
+              ),
+              child: const FittedBox(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.school_rounded, color: neon, size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      'ШКОЛА КОМАНДИРОВ',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                        color: Color(0xFFE9FDFF),
+                        shadows: [
+                          Shadow(color: neon, blurRadius: 8),
+                          Shadow(color: neon, blurRadius: 16),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -4240,23 +4324,32 @@ class _ActiveTaskCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Text('✨', style: TextStyle(fontSize: 28)),
+              const Text('🎓', style: TextStyle(fontSize: 28)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      current == null ? 'Все задания Ии пройдены!' : 'Задание от Ии: «${current.title}»',
+                      current == null
+                          ? '${CommanderSchool.title}: все задания пройдены!'
+                          : '${CommanderSchool.title}: «${current.title}»',
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       current == null
-                          ? 'Пройдено $done из $total. Можно пройти любое задание ещё раз.'
+                          ? '${CommanderSchool.statusLine(done)}. Любое задание можно пройти ещё раз.'
                           : '${current.topic.title} · до +${FinanceContent.rewardBest} Дар · пройдено $done из $total',
                       style: const TextStyle(fontSize: 13.5, color: Color(0xFFB8C7E3)),
                     ),
+                    if (current != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        CommanderSchool.statusLine(done),
+                        style: const TextStyle(fontSize: 13.5, color: Color(0xFF7FEFFF), fontWeight: FontWeight.w700),
+                      ),
+                    ],
                   ],
                 ),
               ),

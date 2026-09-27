@@ -1,8 +1,8 @@
 /// Юридические и информационные тексты приложения «Принц с Барамота».
 ///
-/// ВНИМАНИЕ, АРХИТЕКТОР: значения в [LegalInfo] с пометкой «ЗАПОЛНИТЬ»
-/// должны быть заменены на реальные данные правообладателя перед
-/// публикацией. Выдумывать их нельзя — это юридически значимые сведения.
+/// Сведения о правообладателе в [LegalInfo] юридически значимы: менять их
+/// только по решению правообладателя. После изменения текстов Соглашения
+/// или Политики увеличьте [LegalInfo.documentsVersion].
 class LegalInfo {
   const LegalInfo._();
 
@@ -20,9 +20,10 @@ class LegalInfo {
   /// классификации продукции.
   static const String ageRating = '6+';
 
-  static const String rightsHolder = '[ЗАПОЛНИТЬ: ФИО или наименование правообладателя]';
-  static const String contactEmail = '[ЗАПОЛНИТЬ: адрес электронной почты для обращений]';
-  static const String documentsDate = '[ЗАПОЛНИТЬ: дата редакции документов]';
+  static const String rightsHolder = 'Пугач Олег Юрьевич';
+  static const String contactEmail = 'oleg.pugach@ro.ru';
+  static const String contactPhone = '+7 980 189-92-47';
+  static const String documentsDate = '26.09.2026';
 }
 
 /// Один документ: заголовок + разделы.
@@ -118,7 +119,8 @@ class LegalTexts {
       ),
       LegalSection(
         '7. Контакты',
-        'Вопросы по настоящей Политике: ${LegalInfo.contactEmail}.\n'
+        'Вопросы по настоящей Политике: ${LegalInfo.contactEmail}, '
+            'телефон ${LegalInfo.contactPhone}.\n'
             'Редакция от ${LegalInfo.documentsDate}.',
       ),
     ],
@@ -170,7 +172,8 @@ class LegalTexts {
         '7. Изменение условий и контакты',
         'Правообладатель может обновлять Соглашение; новая редакция '
             'показывается в Приложении и требует повторного подтверждения '
-            'взрослым. Обращения: ${LegalInfo.contactEmail}.\n'
+            'взрослым. Обращения: ${LegalInfo.contactEmail}, '
+            'телефон ${LegalInfo.contactPhone}.\n'
             'Редакция от ${LegalInfo.documentsDate}.',
       ),
     ],

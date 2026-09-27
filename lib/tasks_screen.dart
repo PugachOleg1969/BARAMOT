@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'commander_school.dart';
 import 'economy_engine.dart';
 import 'finance_content.dart';
 import 'game_state.dart';
@@ -27,8 +28,10 @@ class FinanceTaskProgress {
   }
 }
 
-/// Экран «Задания» (ТЗ 2.5.8): игровые ситуации с выбором, последствием
-/// и объяснением. В демонстрационном режиме все задания доступны сразу.
+/// Экран «Школа командиров» (ТЗ 2.5.8, 2.5.11): финансовые задания —
+/// игровые ситуации с выбором, последствием и объяснением. За пройденные
+/// задания Командор получает ранги (см. commander_school.dart).
+/// В демонстрационном режиме все задания доступны сразу.
 class TasksScreen extends StatefulWidget {
   final GameStateData game;
   final Future<void> Function() onSave;
@@ -56,6 +59,9 @@ class _TasksScreenState extends State<TasksScreen> {
   FinanceTaskOption? _chosen;
   int _rewardGiven = 0;
   bool _rewardAlreadyReceived = false;
+
+  /// Ранг, полученный за только что пройденное задание (для поздравления).
+  CommanderRank? _newRank;
 
   @override
   void initState() {
@@ -89,6 +95,7 @@ class _TasksScreenState extends State<TasksScreen> {
       _chosen = null;
       _rewardGiven = 0;
       _rewardAlreadyReceived = false;
+      _newRank = null;
     });
   }
 
@@ -104,6 +111,7 @@ class _TasksScreenState extends State<TasksScreen> {
     final game = widget.game;
     var reward = 0;
     var already = FinanceTaskProgress.isCompleted(game, task);
+    final doneBefore = FinanceTaskProgress.completed(game).length;
 
     if (!already) {
       reward = option.best ? FinanceContent.rewardBest : FinanceContent.rewardOther;
@@ -123,10 +131,12 @@ class _TasksScreenState extends State<TasksScreen> {
       }
     }
 
+    final doneAfter = FinanceTaskProgress.completed(game).length;
     setState(() {
       _chosen = option;
       _rewardGiven = reward;
       _rewardAlreadyReceived = already;
+      _newRank = CommanderSchool.promotion(doneBefore, doneAfter);
     });
     _scrollToFeedback();
     await widget.onSave();
@@ -137,6 +147,7 @@ class _TasksScreenState extends State<TasksScreen> {
       _chosen = null;
       _rewardGiven = 0;
       _rewardAlreadyReceived = true;
+      _newRank = null;
     });
   }
 
@@ -183,11 +194,15 @@ class _TasksScreenState extends State<TasksScreen> {
       key: const Key('tasks.list'),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 32),
       children: [
-        _header('Задания', widget.onBack),
+        _header(CommanderSchool.title, widget.onBack),
         const SizedBox(height: 8),
-        _IyaCard(
-          text: 'Командор, вот задания от меня. В каждом — ситуация и выбор. '
-              'За первое прохождение — Дар на счёт. Пройдено: $done из ${FinanceContent.tasks.length}.',
+        _RankBanner(completedTasks: done, totalTasks: FinanceContent.tasks.length),
+        const SizedBox(height: 10),
+        _MentorCard(
+          text: 'Командор, добро пожаловать на курсы повышения квалификации! '
+              'В каждом задании — ситуация и выбор. За первое прохождение — Дар '
+              'на счёт, а за каждые два задания — новый ранг. '
+              'Пройдено: $done из ${FinanceContent.tasks.length}.',
         ),
         const SizedBox(height: 12),
         for (final topic in FinanceTopic.values) ...[
@@ -225,7 +240,7 @@ class _TasksScreenState extends State<TasksScreen> {
           style: const TextStyle(fontSize: 14, color: Color(0xFF9FB0CC), fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
-        _IyaCard(text: task.situation),
+        _MentorCard(text: task.situation),
         const SizedBox(height: 14),
         for (final option in task.options) ...[
           _OptionButton(
@@ -244,6 +259,7 @@ class _TasksScreenState extends State<TasksScreen> {
             rewardAlreadyReceived: _rewardAlreadyReceived && _rewardGiven == 0,
             taskTitle: task.title,
             walletDar: widget.game.walletDar,
+            newRank: _newRank,
           ),
           const SizedBox(height: 12),
           // Повторить можно после любого выбора: так легко посмотреть
@@ -267,15 +283,19 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 }
 
-class _IyaCard extends StatelessWidget {
+/// Реплика наставника Школы командиров. Отдельный персонаж-голос, чтобы
+/// учёба не смешивалась с сюжетными репликами Ии на Совещаниях.
+class _MentorCard extends StatelessWidget {
+  static const String speaker = 'Наставник Школы';
+
   final String text;
 
-  const _IyaCard({required this.text});
+  const _MentorCard({required this.text});
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: 'Ия говорит: $text',
+      label: '$speaker говорит: $text',
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -286,13 +306,13 @@ class _IyaCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('✨', style: TextStyle(fontSize: 28)),
+            const Text('🎓', style: TextStyle(fontSize: 28)),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Ия', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFFFFC85C))),
+                  const Text(speaker, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFFFFC85C))),
                   const SizedBox(height: 4),
                   Text(text, style: const TextStyle(fontSize: 17, height: 1.4)),
                 ],
@@ -409,6 +429,7 @@ class _FeedbackCard extends StatelessWidget {
   final bool rewardAlreadyReceived;
   final String taskTitle;
   final int walletDar;
+  final CommanderRank? newRank;
 
   const _FeedbackCard({
     required this.option,
@@ -416,6 +437,7 @@ class _FeedbackCard extends StatelessWidget {
     required this.rewardAlreadyReceived,
     required this.taskTitle,
     required this.walletDar,
+    this.newRank,
   });
 
   @override
@@ -469,6 +491,75 @@ class _FeedbackCard extends StatelessWidget {
               ],
             ),
           ],
+          if (newRank != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              key: const Key('tasks.rank_up'),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0x2200E5FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF00E5FF)),
+              ),
+              child: Text(
+                '${newRank!.emoji} Новый ранг Школы командиров: ${newRank!.title}!',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Полоска ранга вверху Школы: текущий ранг и путь до следующего.
+/// Прогресс показан и числом, и полосой — не только цветом (ТЗ 3.6).
+class _RankBanner extends StatelessWidget {
+  final int completedTasks;
+  final int totalTasks;
+
+  const _RankBanner({required this.completedTasks, required this.totalTasks});
+
+  @override
+  Widget build(BuildContext context) {
+    final rank = CommanderSchool.rankFor(completedTasks);
+    final next = CommanderSchool.nextRank(completedTasks);
+    final progress = totalTasks == 0 ? 0.0 : (completedTasks / totalTasks).clamp(0.0, 1.0).toDouble();
+    return Container(
+      key: const Key('tasks.rank_banner'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151F38),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF00E5FF), width: 1.5),
+        boxShadow: const [BoxShadow(color: Color(0x5500E5FF), blurRadius: 16)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${rank.emoji}  Ваш ранг: ${rank.title}',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              backgroundColor: const Color(0xFF26324D),
+              color: const Color(0xFF00E5FF),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            next == null
+                ? 'Высший ранг получен! Все $totalTasks заданий пройдены.'
+                : 'Пройдено $completedTasks из $totalTasks. '
+                    'До ранга «${next.title}»: ${CommanderSchool.tasksToNext(completedTasks)}.',
+            style: const TextStyle(fontSize: 15, color: Color(0xFFC5D0E4)),
+          ),
         ],
       ),
     );
